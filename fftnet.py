@@ -88,12 +88,12 @@ class FFTNet(nn.Module):
         output = self.linear(output.transpose(1, 2))
         return output.transpose(1, 2)
 
-"""class Subband_FFTNet(nn.module):
+class Subband_FFTNet(nn.Module):
     def __init__(self, 
                  num_band=9,
                  downsampling_factor=4,
                  n_stack=11, 
-                 fftnet_channels=256, 
+                 fft_channels=256, 
                  quantization_channels=256, 
                  local_conditio_channels=None):
 
@@ -103,10 +103,12 @@ class FFTNet(nn.Module):
         self.n_stack=n_stack
         self.quantization_channels = quantization_channels
         self.local_condition_channels = local_condition_channels
-        self.window_shifts = [2 ** i for i in range(self.n_stacks)]
-        self.receptive_field = sum(self.window_shifts) + 1
         self.linear = nn.Linear(fft_channels, quantization_channels)
-        self.layers = nn.ModuleList()"""
-        
-        
+        self.layers = nn.Modul
 
+	self.model = [FFTNet(n_stack, fft_channels, qauntization_channels, local_condition_channels) for i in range(num_band)]
+    def forward(self, x, h):
+	
+
+
+        
