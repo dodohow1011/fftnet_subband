@@ -61,7 +61,9 @@ def create_model(hparams):
     else:
         lc_channel = hparams.num_mels
 
-    return FFTNet(n_stacks=hparams.n_stacks,
+    return subband_FFTNet(num_band=hparams.n_stacks,
+                  downsampling_factor=hparams.downsampling_factor,
+                  n_stacks=hparams.n_stacks,
                   fft_channels=hparams.fft_channels,
                   quantization_channels=hparams.quantization_channels,
                   local_condition_channels=lc_channel)
@@ -75,7 +77,7 @@ def train_fn(args):
     optimizer = optim.Adam(model.parameters(), lr=hparams.learning_rate)
     for state in optimizer.state.values():
         for key, value in state.items():
-            if torch.is_tensor(value):
+            if torch.is_tensor(value):2
                 state[key] = value.to(device)
 
     if args.resume is not None:
@@ -136,6 +138,7 @@ def train_fn(args):
 
             optimizer.zero_grad()
             output = model(audio[:,:-1,:], h[:,:,1:])
+            output = inverse_subband(output)
             loss = criterion(output, target)
             log('step [%3d]: loss: %.3f' % (global_step, loss.item()))
             writer.add_scalar('loss', loss.item(), global_step)
@@ -155,6 +158,8 @@ def train_fn(args):
                 samples=out.argmax(0)
                 waveform = mu_law_decode(np.asarray(samples[model.receptive_field:].cpu().numpy()), hparams.quantization_channels)
                 write_wav(waveform, hparams.sample_rate, os.path.join(args.checkpoint_dir, "train_eval_{}.wav".format(global_step)))
+def inverse_subband(output):
+    
 
 
 if __name__ == '__main__':

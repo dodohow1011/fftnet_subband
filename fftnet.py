@@ -109,7 +109,7 @@ class FFTNet(nn.Module):
         return output.transpose(1, 2)
 
 class Subband_FFTNet(nn.Module):
-        return result    def __init__(self, 
+        def __init__(self, 
                  num_band=9,
                  downsampling_factor=4,
                  n_stack=11, 
@@ -136,8 +136,7 @@ class Subband_FFTNet(nn.Module):
             else:
                 out = model[i](x[i], x[0], h)
                 output.append(out)
-        result = inverse_subband(output)
-        return result
+        return output
 
 
 
