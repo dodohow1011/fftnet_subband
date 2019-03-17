@@ -15,6 +15,8 @@ from tqdm import tqdm
 
 from hparams import hparams
 from utils import audio
+import sys
+import os
 
 def find_files(directory, pattern='*.wav'):
     '''Recursively finds all files matching the pattern.'''
@@ -26,6 +28,8 @@ def find_files(directory, pattern='*.wav'):
 
 def _process_wav(wav_path, audio_path, spc_path):
     wav = audio.load_wav(wav_path)
+    wav1, wav2, wav3, wav4 = audio.subband(wav)
+
     if hparams.feature_type == 'mcc':
         # Extract mcc and f0
         spc = audio.extract_mcc(wav)
@@ -34,17 +38,48 @@ def _process_wav(wav_path, audio_path, spc_path):
         spc = audio.melspectrogram(wav).astype(np.float32)
 
     # Align audios and mels
-    hop_length = int(hparams.frame_shift_ms / 1000 * hparams.sample_rate)
-    length_diff = len(spc) * hop_length - len(wav)
-    wav = wav.reshape(-1,1)
-    if length_diff > 0:
-        wav = np.pad(wav, [[0, length_diff], [0, 0]], 'constant')
-    elif length_diff < 0:
-        wav = wav[: hop_length * spc.shape[0]]
+    hop_length = int(hparams.frame_shift_ms / 4000 * hparams.sample_rate)
+    length_diff_1 = len(spc) * hop_length - len(wav1)
+    length_diff_2 = len(spc) * hop_length - len(wav2)
+    length_diff_3 = len(spc) * hop_length - len(wav3)
+    length_diff_4 = len(spc) * hop_length - len(wav4)
+    wav1 = wav1.reshape(-1,1)
+    if length_diff_1 > 0:
+        wav1 = np.pad(wav1, [[0, length_diff_1], [0, 0]], 'constant')
+    elif length_diff_1 < 0:
+        wav1 = wav1[: hop_length * spc.shape[0]]
+    wav2 = wav2.reshape(-1,1)
+    if length_diff_2 > 0:
+        wav2 = np.pad(wav2, [[0, length_diff_2], [0, 0]], 'constant')
+    elif length_diff_2 < 0:
+        wav2 = wav2[: hop_length * spc.shape[0]]
+    wav3 = wav3.reshape(-1,1)
+    if length_diff_3 > 0:
+        wav3 = np.pad(wav1, [[0, length_diff_3], [0, 0]], 'constant')
+    elif length_diff_3 < 0:
+        wav3 = wav3[: hop_length * spc.shape[0]]
+    wav4 = wav4.reshape(-1,1)
+    if length_diff_4 > 0:
+        wav4 = np.pad(wav4, [[0, length_diff_4], [0, 0]], 'constant')
+    elif length_diff_4 < 0:
+        wav4 = wav4[: hop_length * spc.shape[0]]
+    fid1 = os.path.basename(audio_path).replace('.npy', '_band1.npy')
+    fid2 = os.path.basename(audio_path).replace('.npy', '_band2.npy')
+    fid3 = os.path.basename(audio_path).replace('.npy', '_band3.npy')
+    fid4 = os.path.basename(audio_path).replace('.npy', '_band4.npy')
 
-    np.save(audio_path, wav)
+    fid1 = os.path.join('training_data/audios', fid1)
+    
+    fid2 = os.path.join('training_data/audios', fid2)
+    fid3 = os.path.join('training_data/audios', fid3)
+    fid4 = os.path.join('training_data/audios', fid4)
+    
+    np.save(fid1, wav1)
+    np.save(fid2, wav2)
+    np.save(fid3, wav3)
+    np.save(fid4, wav4)
     np.save(spc_path, spc)
-    return (audio_path, spc_path, spc.shape[0])
+    return (fid1, fid2, fid3, fid4, spc_path, spc.shape[0])
 
 
 def calc_stats(file_list, out_dir):
@@ -55,7 +90,7 @@ def calc_stats(file_list, out_dir):
 
     mean = scaler.mean_
     scale = scaler.scale_
-    if hparams.feature_type == "mcc":
+    if hparams.feature_type == "mcc": 
         mean[0] = 0.0
         scale[0] = 1.0
     
@@ -95,7 +130,7 @@ def write_metadata(metadata, out_dir):
     with open(os.path.join(out_dir, 'train.txt'), 'w', encoding='utf-8') as f:
         for m in metadata:
             f.write('|'.join([str(x) for x in m]) + '\n')
-    frames = sum([m[2] for m in metadata])
+    frames = sum([m[5] for m in metadata])
     hours = frames * hparams.frame_shift_ms / (3600 * 1000)
     print('Wrote %d utterances, %d frames (%.2f hours)' % (len(metadata), frames, hours))
 
