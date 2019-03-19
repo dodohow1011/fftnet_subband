@@ -15,7 +15,7 @@ import torch.optim as optim
 from torchvision import transforms
 
 from torch.utils.data import DataLoader
-from fftnet import FFTNet
+from fftnet import Subband_FFTNet
 from dataset import CustomDataset
 from utils.utils import apply_moving_average, ExponentialMovingAverage, mu_law_decode, write_wav
 from utils import infolog
@@ -61,7 +61,7 @@ def create_model(hparams):
     else:
         lc_channel = hparams.num_mels
 
-    return subband_FFTNet(num_band=hparams.n_stacks,
+    return Subband_FFTNet(num_band=hparams.num_band,
                   downsampling_factor=hparams.downsampling_factor,
                   n_stacks=hparams.n_stacks,
                   fft_channels=hparams.fft_channels,
@@ -70,14 +70,14 @@ def create_model(hparams):
 
 def train_fn(args):
     device = torch.device("cuda" if hparams.use_cuda else "cpu")
-    upsample_factor = int(hparams.frame_shift_ms / 1000 * hparams.sample_rate)
+    upsample_factor = int(hparams.frame_shift_ms / 1000 * hparams.downsample_rate)
 
     model = create_model(hparams)
     model.to(device)
     optimizer = optim.Adam(model.parameters(), lr=hparams.learning_rate)
     for state in optimizer.state.values():
         for key, value in state.items():
-            if torch.is_tensor(value):2
+            if torch.is_tensor(value):
                 state[key] = value.to(device)
 
     if args.resume is not None:
@@ -135,11 +135,9 @@ def train_fn(args):
             target = target.squeeze(-1)
             local_condition = local_condition.transpose(1, 2)
             audio, target, h = audio.to(device), target.to(device), local_condition.to(device)
-
             optimizer.zero_grad()
-            output = model(audio[:,:-1,:], h[:,:,1:])
-            output = inverse_subband(output)
-            loss = criterion(output, target)
+            output = model(audio[:,:,:-1,:], h[:,:,1:])
+            loss = criterion(output[:,0,:,:], target[:,0,:])
             log('step [%3d]: loss: %.3f' % (global_step, loss.item()))
             writer.add_scalar('loss', loss.item(), global_step)
 
@@ -154,11 +152,10 @@ def train_fn(args):
 
             if global_step % hparams.checkpoint_interval == 0:
                 save_checkpoint(device, hparams, model, optimizer, global_step, args.checkpoint_dir, ema)
-                out = output[1,:,:]
+                out = output[1,0,:,:]
                 samples=out.argmax(0)
                 waveform = mu_law_decode(np.asarray(samples[model.receptive_field:].cpu().numpy()), hparams.quantization_channels)
                 write_wav(waveform, hparams.sample_rate, os.path.join(args.checkpoint_dir, "train_eval_{}.wav".format(global_step)))
-def inverse_subband(output):
     
 
 

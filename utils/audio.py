@@ -8,7 +8,8 @@ import tensorflow as tf
 from scipy import signal
 from scipy.interpolate import interp1d
 from hparams import hparams
-
+import sys
+import os
 """Reference:
     https://github.com/keithito/tacotron/blob/master/util/audio.py
     https://github.com/kan-bayashi/PytorchWaveNetVocoder/blob/master/src/bin/feature_extract.py
@@ -17,6 +18,9 @@ from hparams import hparams
 def load_wav(path):
   return librosa.core.load(path, sr=hparams.sample_rate)[0]
 
+
+def downsample(wav):
+    return librosa.core.resample(wav, orig_sr=hparams.sample_rate, target_sr=hparams.downsample_rate)
 
 def save_wav(wav, path):
   wav *= 32767 / max(0.01, np.max(np.abs(wav)))
@@ -36,6 +40,24 @@ def melspectrogram(y):
   S = _amp_to_db(_linear_to_mel(np.abs(D))) - hparams.ref_level_db
   return _normalize(S).T
 
+
+def subband(y):
+  # stft
+  D = _stft(preemphasis(y))
+  # size of exch band
+  band = D.shape[0]
+  # inverse ft
+  n_fft, hop_length, win_length = _stft_parameters()
+  wav1 = librosa.istft(D[:band//4,:], hop_length=hop_length, win_length=win_length)
+  wav2 = librosa.istft(D[band//4:band//2,:], hop_length=hop_length, win_length=win_length)
+  wav3 = librosa.istft(D[band//2:band*3//4,:], hop_length=hop_length, win_length=win_length)
+  wav4 = librosa.istft(D[band*3//4:band,:], hop_length=hop_length, win_length=win_length)
+
+  wav1 = downsample(wav1)
+  wav2 = downsample(wav2)
+  wav3 = downsample(wav3)
+  wav4 = downsample(wav4)
+  return wav1, wav2, wav3, wav4
 
 def _stft(y):
   n_fft, hop_length, win_length = _stft_parameters()

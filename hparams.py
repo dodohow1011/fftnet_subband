@@ -13,6 +13,8 @@ hparams = tf.contrib.training.HParams(
   minf0=40,
   maxf0=500,
   sample_rate=16000,
+  downsample_rate=4000,
+  downsampling_factor=4,
   feature_type='melspc', # mcc or melspc
   frame_length_ms=25,
   frame_shift_ms=10,
@@ -25,13 +27,14 @@ hparams = tf.contrib.training.HParams(
   use_cuda=True,
   use_local_condition=True,
   batch_size=4,
-  sample_size=16000,
+  sample_size=4000,
   learning_rate=2e-4,
   training_steps=200000,
   checkpoint_interval=5000,
 
   # Model
   n_stacks=11,
+  num_band=4,
   fft_channels=256,
   quantization_channels=256,
 )
