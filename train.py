@@ -137,12 +137,13 @@ def train_fn(args):
             audio, target, h = audio.to(device), target.to(device), local_condition.to(device)
             optimizer.zero_grad()
             output = model(audio[:,:,:-1,:], h[:,:,1:])
+
             loss = criterion(output[:,0,:,:], target[:,0,:])
             log('step [%3d]: loss: %.3f' % (global_step, loss.item()))
             writer.add_scalar('loss', loss.item(), global_step)
-
             loss.backward()
             optimizer.step()
+
 
             # update moving average
             if ema is not None:
