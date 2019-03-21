@@ -22,6 +22,9 @@ def load_wav(path):
 def downsample(wav):
     return librosa.core.resample(wav, orig_sr=hparams.sample_rate, target_sr=hparams.downsample_rate)
 
+def upsample(wav):
+    return liborosa.core.resample(wav, orig_sr=4000, target_sr=16000)
+
 def save_wav(wav, path):
   wav *= 32767 / max(0.01, np.max(np.abs(wav)))
   librosa.output.write_wav(path, wav.astype(np.int16), hparams.sample_rate)
@@ -70,7 +73,27 @@ def _stft_parameters():
   win_length = int(hparams.frame_length_ms / 1000 * hparams.sample_rate)
   return n_fft, hop_length, win_length
 
+def synthesis(sample_1, sample_2, sample_3, sample_4):
+    wav1 = upsample(sample_1)
+    wav2 = upsample(sample_2)
+    wav3 = upsample(sample_3)
+    wav4 = upsample(sample_4)
 
+    D1 = _stft(preemphases(wav1))
+    D2 = _stft(preemphases(wav2))
+    D3 = _stft(preemphases(wav3))
+    D4 = _stft(preemphases(wav4))
+
+    D = np.hstack(D1, D2)
+    D = np.hstack(D, D3)
+    D = np.hstack(D, D4)
+
+    n_fft, hop_length, win_length = _stft_parameters()
+    wav = librosa.istft(D, hop_length=hop_length, win_length=win_length)
+
+    return wav
+    
+    
 # Not tested
 def extract_mcc(wav):
     wav = np.array(wav, dtype=np.float)
