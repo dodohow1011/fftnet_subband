@@ -84,9 +84,9 @@ def synthesis(sample_1, sample_2, sample_3, sample_4):
     D3 = _stft(preemphases(wav3))
     D4 = _stft(preemphases(wav4))
 
-    D = np.hstack(D1, D2)
-    D = np.hstack(D, D3)
-    D = np.hstack(D, D4)
+    D = np.vstack(D1, D2)
+    D = np.vstack(D, D3)
+    D = np.vstack(D, D4)
 
     n_fft, hop_length, win_length = _stft_parameters()
     wav = librosa.istft(D, hop_length=hop_length, win_length=win_length)
